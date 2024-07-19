@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import './Todo.css';
 import { AiOutlineDelete, AiOutlineEdit } from 'react-icons/ai';
 import { BsCheckLg } from 'react-icons/bs';
+import { useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
+import { addtask, completetask, deleteTask, editTask } from '../Features/TodoSlice';
 
 function Todo() {
   const [isCompleteScreen, setIsCompleteScreen] = useState(false);
@@ -14,6 +17,16 @@ function Todo() {
   const [errorMessage, setErrorMessage] = useState('');
   const [regexError, setRegexError] = useState('');
   const [spaceError, setSpaceError] = useState('');
+  const dispatch = useDispatch()
+  const [EditMode, setEditMode] = useState(false)
+  const [EditedTask, setEditedTask] = useState(null)
+  const [editIndex, setEditIndex] = useState(null)
+  const [EditError, setEditError] = useState("")
+
+
+  const todos = useSelector(state => state.Todo)
+
+  console.log(todos);
 
   useEffect(() => {
     let savedTodo = JSON.parse(localStorage.getItem('todolist'));
@@ -28,6 +41,9 @@ function Todo() {
 
   const handleAddTodo = () => {
     const regex = /^[a-zA-Z0-9\s]+$/;
+
+
+
 
     if (!newTitle.trim() || !newDescription.trim()) {
       setErrorMessage('Title and Description cannot be empty');
@@ -50,12 +66,14 @@ function Todo() {
     };
     let updatedTodoArr = [...allTodos, newTodoItem];
     setTodos(updatedTodoArr);
+    dispatch(addtask(newTitle))
     localStorage.setItem('todolist', JSON.stringify(updatedTodoArr));
     setNewTitle('');
     setNewDescription('');
     setErrorMessage('');
     setRegexError('');
     setSpaceError('');
+
   };
 
   const handleDeleteTodo = index => {
@@ -63,18 +81,29 @@ function Todo() {
     reducedTodo.splice(index, 1);
     localStorage.setItem('todolist', JSON.stringify(reducedTodo));
     setTodos(reducedTodo);
+
+    dispatch(deleteTask(index))
   };
 
   const handleComplete = index => {
     let now = new Date();
     let completedOn = `${now.getDate()}-${now.getMonth() + 1}-${now.getFullYear()} at ${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}`;
+    
     let filteredItem = {
+     
+
+
       ...allTodos[index],
       completedOn,
-    };
+     };
+     
+
+
+
     let updatedCompletedArr = [...completedTodos, filteredItem];
     setCompletedTodos(updatedCompletedArr);
     handleDeleteTodo(index);
+    handleComplete(index);
     localStorage.setItem('completedTodos', JSON.stringify(updatedCompletedArr));
   };
 
@@ -83,12 +112,13 @@ function Todo() {
     reducedTodo.splice(index, 1);
     localStorage.setItem('completedTodos', JSON.stringify(reducedTodo));
     setCompletedTodos(reducedTodo);
+    
   };
 
-  const handleEdit = (ind, item) => {
-    setCurrentEdit(ind);
-    setCurrentEditedItem(item);
-  };
+  // const handleEdit = (ind, item) => {
+  //   setCurrentEdit(ind);
+  //   setCurrentEditedItem(item);
+  // };
 
   const handleUpdateTitle = (value) => {
     setCurrentEditedItem((prev) => {
@@ -110,6 +140,33 @@ function Todo() {
     localStorage.setItem('todolist', JSON.stringify(newToDo));
   };
 
+  const handleSave = (id) => {
+
+    if (!EditedTask) {
+      setEditError('No Changes Deducted');
+      return
+    }
+
+    dispatch(editTask({ editText: EditedTask, id }))
+    setEditMode(false)
+    setEditedTask('');
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   useEffect(() => {
     if (!allTodos.length && !completedTodos.length) {
       setErrorMessage('No todos available');
@@ -117,6 +174,11 @@ function Todo() {
       setErrorMessage('');
     }
   }, [allTodos, completedTodos]);
+
+  const handleEdit = (id) => {
+    setEditMode(true)
+    setEditIndex(id)
+  }
 
   return (
     <div className="App">
@@ -175,8 +237,58 @@ function Todo() {
         </div>
 
         <div className="todo-list">
-          {isCompleteScreen === false &&
-            allTodos.map((item, index) => {
+          {todos.map((todo) => {
+
+            return (
+              <div className='todo-list-item'>
+
+
+                {EditMode && editIndex === todo.id ? (
+                  <div  className=''>
+                    <input onChange={(e) => setEditedTask(e.target.value)} defaultValue={todo.text} className='todo-input-item'/>
+                    <button onClick={() => handleSave(todo.id)} className='changeSave'>Save</button>
+                    {EditError && <p className="error-message">{EditError}</p>}
+
+                  </div>
+                ) : (
+                  <p>{todo.text}</p>
+                )}
+
+                <div className='list-icons'>
+                  <AiOutlineEdit
+                    className="check-icon"
+                    size={30}
+                    onClick={() => handleEdit(todo.id)}
+                    title="Edit?"
+                  />
+                    <BsCheckLg
+                        className="check-icon"
+                        size={30}
+                        onClick={() => dispatch(completetask(todo.id))}
+                        title="Complete?"
+                      />
+                  <AiOutlineDelete
+                    className="icon"
+                    size={30}
+
+                    onClick={() => dispatch(deleteTask(todo.id))}
+                    title="Delete?"
+                  />
+                </div>
+              </div>
+            )
+          })}
+
+
+
+
+
+
+
+
+
+          {/* {isCompleteScreen === false &&
+            todos.map((item, index) => {
               if (currentEdit === index) {
                 return (
                   <div className='edit__wrapper' key={index}>
@@ -210,7 +322,7 @@ function Todo() {
                     <div>
                       <AiOutlineDelete
                         className="icon"
-                        onClick={() => handleDeleteTodo(index)}
+                        onClick={() => handleDeleteTodo(item.id)}
                         title="Delete?"
                       />
                       <BsCheckLg
@@ -227,9 +339,9 @@ function Todo() {
                   </div>
                 );
               }
-            })}
+            })} */}
 
-          {isCompleteScreen === true &&
+          {/* {isCompleteScreen === true &&
             completedTodos.map((item, index) => {
               return (
                 <div className="todo-list-item" key={index}>
@@ -247,7 +359,7 @@ function Todo() {
                   </div>
                 </div>
               );
-            })}
+            })} */}
         </div>
       </div>
     </div>
